@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DapMarket</title>
+<style>
+:root{
+  --bg:#0b1120;--panel:#111c31;--panel2:#18253d;--border:#263653;
+  --text:#f8fafc;--muted:#94a3b8;--green:#22c55e;--red:#ef4444;
+  --blue:#38bdf8;--gold:#fbbf24;--shadow:0 20px 50px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at top,#172554 0,#0b1120 45%);color:var(--text);min-height:100vh}
+button,input,select{font:inherit}
+button{border:0;cursor:pointer}
+.topbar{position:sticky;top:0;z-index:30;background:rgba(11,17,32,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:900;font-size:20px}.brand span{color:var(--blue)}
+.owner-btn{background:#263653;color:white;border:1px solid #34486b;padding:9px 13px;border-radius:10px;font-weight:700}
+.owner-btn:hover{background:#33496e}
+.container{width:min(1050px,calc(100% - 28px));margin:0 auto;padding:28px 0 45px}
+.hero{text-align:center;margin-bottom:20px}.hero h1{font-size:clamp(32px,7vw,52px);margin:8px 0}.hero p{color:var(--muted);margin:0}
+.card{background:linear-gradient(145deg,rgba(24,37,61,.96),rgba(17,28,49,.96));border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow)}
+.market{padding:22px}
+.player-row{display:flex;gap:12px;align-items:end;justify-content:space-between;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:7px;min-width:190px}.field label{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+select,input{background:#0b1426;color:white;border:1px solid #30415f;border-radius:10px;padding:11px 12px;outline:none}
+select:focus,input:focus{border-color:var(--blue)}
+.price{text-align:center;font-size:clamp(42px,9vw,70px);font-weight:900;margin:18px 0 2px;letter-spacing:-2px}
+.change{text-align:center;font-weight:800;min-height:22px}.up{color:var(--green)}.down{color:var(--red)}.flat{color:var(--muted)}
+.chart-wrap{height:290px;margin:18px 0;background:#0b1426;border:1px solid var(--border);border-radius:14px;padding:8px}
+canvas{width:100%;height:100%;display:block}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.stat{background:rgba(38,54,83,.55);border:1px solid var(--border);border-radius:14px;padding:15px;text-align:center}
+.stat .label{font-size:12px;color:var(--muted);font-weight:700}.stat .value{font-size:22px;font-weight:900;margin-top:5px}
+.trade{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.trade button{padding:14px;border-radius:12px;color:white;font-weight:900;font-size:16px;transition:.15s}
+.trade button:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.buy{background:#15803d}.sell{background:#b91c1c}
+.quantity{margin-top:15px}.quantity input{width:100%}
+.section-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.small-card{padding:18px}.small-card h2{margin:0 0 12px;font-size:18px}
+.table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:9px;border-bottom:1px solid var(--border);font-size:13px}.table th{color:var(--muted)}
+.log{max-height:210px;overflow:auto}.log-item{padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}.log-item span{color:var(--muted)}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:100;align-items:center;justify-content:center;padding:18px}
+.modal.open{display:flex}.modal-box{width:min(520px,100%);max-height:90vh;overflow:auto;background:#111c31;border:1px solid var(--border);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+.modal h2{margin-top:0}.modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.admin-btn{background:#263653;color:white;padding:12px;border-radius:10px;font-weight:800}.danger{background:#991b1b}.success{background:#166534}.blue{background:#075985}
+.message{min-height:22px;color:var(--muted);margin-top:10px;font-size:13px}.message.error{color:#f87171;font-weight:800}
+hr{border:0;border-top:1px solid var(--border);margin:20px 0}
+.hidden{display:none!important}
+.account-modal{display:flex;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:300;align-items:center;justify-content:center;padding:18px}
+.account-box{width:min(460px,100%);background:#111c31;border:1px solid var(--border);border-radius:20px;padding:26px;box-shadow:var(--shadow)}
+.account-box h2{margin-top:0}.account-box p{color:var(--muted);line-height:1.5}
+.account-box input{width:100%;margin-top:7px}.account-btn{width:100%;margin-top:12px;background:#075985;color:white;padding:13px;border-radius:10px;font-weight:900}
+.account-name{font-weight:900;color:var(--blue)}
+.toast{position:fixed;right:16px;bottom:16px;background:#17253d;border:1px solid var(--border);padding:13px 16px;border-radius:12px;box-shadow:var(--shadow);z-index:200;opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s}
+.toast.show{opacity:1;transform:none}
+@media(max-width:700px){
+  .stats,.section-grid{grid-template-columns:1fr}
+  .trade{grid-template-columns:1fr}
+  .container{width:min(100% - 18px,1050px)}
+  .market{padding:15px}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">📈 <span>Dap</span>Market</div>
+  <button class="owner-btn" id="ownersButton">⚙ Owners Panel</button>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <h1>DapMarket</h1>
+    <p>Trade Dap Stock with Dap Coins.</p>
+    <div id="setupNotice" class="message" style="margin-top:12px"></div>
+  </section>
+
+  <section class="card market">
+    <div class="player-row">
+      <div class="field">
+        <label>Your Account</label>
+        <div class="account-name" id="accountName" style="padding:11px 0">Not signed in</div>
+        <button class="admin-btn" id="switchAccountButton" style="margin-top:6px">Switch Account</button>
+      </div>
+      <div class="field">
+        <label>Market Status</label>
+        <div id="marketStatus" style="padding:11px 0;font-weight:800;color:var(--green)">● LIVE</div>
+      </div>
+    </div>
+
+    <div class="price" id="stockPrice">$10.00</div>
+    <div id="priceChange" class="change flat">Starting price</div>
+
+    <div class="chart-wrap"><canvas id="stockChart"></canvas></div>
+
+    <div class="stats">
+      <div class="stat"><div class="label">DAP COINS</div><div class="value" id="coins">1.00</div></div>
+      <div class="stat"><div class="label">DAP STOCK</div><div class="value" id="shares">0</div></div>
+      <div class="stat"><div class="label">TOTAL VALUE</div><div class="value" id="portfolio">$1.00</div></div>
+    </div>
+
+    <div class="quantity">
+      <div class="field">
+        <label for="quantity">Quantity</label>
+        <input id="quantity" type="number" min="1" step="1" value="1">
+      </div>
+    </div>
+
+    <div class="trade">
+      <button class="buy" id="buyButton">📈 Buy Stock</button>
+      <button class="sell" id="sellButton">📉 Sell Stock</button>
+    </div>
+  </section>
+
+  <section class="section-grid">
+    <div class="card small-card">
+      <h2>🏆 Leaderboard</h2>
+      <table class="table"><thead><tr><th>Player</th><th>Stock</th><th>Total</th></tr></thead><tbody id="leaderboard"></tbody></table>
+    </div>
+    <div class="card small-card">
+      <h2>🧾 Recent Activity</h2>
+      <div class="log" id="activityLog"></div>
+    </div>
+  </section>
+</main>
+
+<div class="account-modal" id="accountModal">
+  <div class="account-box">
+    <h2>👋 Welcome to DapMarket</h2>
+    <p>Type your player name. This browser will remember your account so you return to the same name next time.</p>
+    <div class="field"><label for="accountInput">Your Name</label><input id="accountInput" maxlength="20" autocomplete="nickname" placeholder="Enter your name"></div>
+    <button class="account-btn" id="accountContinueButton">Continue to DapMarket</button>
+    <div class="message" id="accountMessage"></div>
+  </div>
+</div>
+
+<div class="modal" id="ownerModal">
+  <div class="modal-box">
+    <div id="passwordScreen">
+      <h2>🔐 Owners Panel</h2>
+      <p style="color:var(--muted)">Enter the owner password to unlock market controls.</p>
+      <div class="field"><label>Password</label><input id="passwordInput" type="password" placeholder="Enter password"></div>
+      <button class="admin-btn blue" style="width:100%;margin-top:12px" id="loginButton">Unlock</button>
+      <div class="message" id="passwordMessage"></div>
+      <button class="admin-btn danger" style="width:100%;margin-top:10px" id="closePasswordButton">Cancel</button>
+    </div>
+
+    <div id="adminPanel" class="hidden">
+      <h2>⚙️ Admin Panel</h2>
+      <p style="color:var(--muted)">Control the market and player balances.</p>
+
+      <div class="field"><label>Set Exact Stock Price</label><input id="setPriceInput" type="number" min=".25" step=".01" placeholder="Price"></div>
+      <div class="modal-actions">
+        <button class="admin-btn success" id="raiseButton">📈 Raise +5</button>
+        <button class="admin-btn danger" id="lowerButton">📉 Lower -5</button>
+      </div>
+      <button class="admin-btn blue" style="width:100%;margin-top:10px" id="setPriceButton">Set Exact Price</button>
+
+      <hr>
+      <h3>💰 Give Dap Coins</h3>
+      <div class="field"><label>Player</label><select id="givePlayer"></select></div>
+      <div class="field" style="margin-top:10px"><label>Amount</label><input id="giveAmount" type="number" min=".01" step=".01" value="1"></div>
+      <button class="admin-btn success" style="width:100%;margin-top:10px" id="giveCoinsButton">Give Dap Coins</button>
+
+      <hr>
+      <h3>🎁 Transfer Coins</h3>
+      <div class="field"><label>From</label><select id="transferFrom"></select></div>
+      <div class="field" style="margin-top:10px"><label>To</label><select id="transferTo"></select></div>
+      <div class="field" style="margin-top:10px"><label>Amount</label><input id="transferAmount" type="number" min=".01" step=".01" value="1"></div>
+      <button class="admin-btn blue" style="width:100%;margin-top:10px" id="transferButton">Transfer Coins</button>
+
+      <hr>
+      <div class="modal-actions">
+        <button class="admin-btn" id="pauseButton">⏸ Pause Market</button>
+        <button class="admin-btn danger" id="resetButton">↺ Reset Game</button>
+      </div>
+      <button class="admin-btn danger" style="width:100%;margin-top:12px" id="closeOwnerButton">Close Owners Panel</button>
+      <div class="message" id="adminMessage"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+"use strict";
+
+const OWNER_PASSWORD = "1920";
+const MIN_PRICE = 0.25;
+const MAX_HISTORY = 120;
+const TICK_MS = 1000;
+
+// MULTIPLAYER SETUP: paste your Supabase Project URL and Publishable/Anon Key below.
+// These are safe to put in browser code when your database policies are configured for the game.
+const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
+const SUPABASE_KEY = "PASTE_YOUR_SUPABASE_PUBLISHABLE_KEY_HERE";
+const ROOM = "dapmarket-main";
+const ACCOUNT_STORAGE_KEY = "dapmarket_account_v1";
+let accountName = localStorage.getItem(ACCOUNT_STORAGE_KEY) || "";
+
+const defaultPlayers = {
+  Blake:{coins:1,shares:0}, Alex:{coins:1,shares:0},
+  Jordan:{coins:1,shares:0}, Taylor:{coins:1,shares:0}
+};
+
+const multiplayerReady = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("PASTE_") && !SUPABASE_KEY.includes("PASTE_");
+const supabase = multiplayerReady ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+let channel = null;
+let isOwner = false;
+let nameCheckPending = null;
+let state = {
+  stockPrice:10, previousPrice:10, history:[10],
+  players:structuredClone(defaultPlayers), currentPlayer:accountName || "",
+  paused:false, activity:[]
+};
+
+const $ = id => document.getElementById(id);
+const els = {
+  price:$('stockPrice'), change:$('priceChange'), coins:$('coins'), shares:$('shares'),
+  portfolio:$('portfolio'), player:$('playerSelect'), quantity:$('quantity'),
+  chart:$('stockChart'), leaderboard:$('leaderboard'), log:$('activityLog'),
+  modal:$('ownerModal'), passwordScreen:$('passwordScreen'), admin:$('adminPanel'),
+  password:$('passwordInput'), passwordMessage:$('passwordMessage'),
+  adminMessage:$('adminMessage'), status:$('marketStatus'), toast:$('toast')
+};
+
+function cloneState(){ return JSON.parse(JSON.stringify(state)); }
+function applyState(next, silent=false){
+  if(!next || !next.players || typeof next.stockPrice!=='number') return;
+  state={
+    stockPrice:Number(next.stockPrice)||10,
+    previousPrice:Number(next.previousPrice)||Number(next.stockPrice)||10,
+    history:Array.isArray(next.history)&&next.history.length?next.history:[10],
+    players:next.players,
+    currentPlayer:accountName || state.currentPlayer || Object.keys(next.players)[0] || '',
+    paused:Boolean(next.paused),
+    activity:Array.isArray(next.activity)?next.activity:[]
+  };
+  populatePlayers(); updateDisplay(false);
+  if(!silent) notify('Market synced.');
+}
+
+function broadcast(type, payload={}){
+  if(!channel) return;
+  channel.send({type:'broadcast',event:type,payload}).catch(()=>{});
+}
+
+async function initMultiplayer(){
+  if(!multiplayerReady){
+    els.status.textContent='● SETUP NEEDED';
+    els.status.style.color='var(--gold)';
+    notify('Add your Supabase settings to enable multiplayer.');
+    $('setupNotice').textContent='Multiplayer is not connected yet. Add your Supabase Project URL and Publishable Key in the HTML file.';
+    return;
+  }
+  channel=supabase.channel(ROOM,{config:{broadcast:{ack:true},presence:{key:crypto.randomUUID()}}});
+  channel.on('broadcast',{event:'state'},({payload})=>applyState(payload.state,true));
+  channel.on('broadcast',{event:'request-state'},()=>{
+    if(isOwner) broadcast('state', {state:cloneState()});
+  });
+  channel.on('broadcast',{event:'name-check'},({payload})=>{
+    if(!payload || !payload.name || !payload.requestId) return;
+    const requested=normalizeName(payload.name);
+    const mine=normalizeName(accountName);
+    if(requested && requested===mine){
+      broadcast('name-check-result',{requestId:payload.requestId,name:requested,taken:true});
+      return;
+    }
+    if(state.players && Object.keys(state.players).some(n=>normalizeName(n)===requested)){
+      broadcast('name-check-result',{requestId:payload.requestId,name:requested,taken:true});
+    }
+  });
+  channel.on('broadcast',{event:'name-check-result'},({payload})=>{
+    if(!nameCheckPending || !payload || payload.requestId!==nameCheckPending.requestId) return;
+    if(payload.taken) finishNameCheck(false,'This name has been taken. Please try something else.');
+  });
+  channel.on('broadcast',{event:'action'},({payload})=>{
+    if(payload && payload.action) handleRemoteAction(payload.action);
+  });
+  channel.on('presence',{event:'sync'},()=>{});
+  await channel.subscribe(async status=>{
+    if(status==='SUBSCRIBED'){
+      els.status.textContent='● MULTIPLAYER LIVE';
+      els.status.style.color='var(--green)';
+      broadcast('request-state');
+      if(accountName) broadcast('action',{action:{type:'join',player:accountName,clientId:window.dapClientId}});
+      if(isOwner) broadcast('state',{state:cloneState()});
+    }
+  });
+}
+
+function handleRemoteAction(a){
+  if(!a || a.from===state.currentPlayer && a.clientId===window.dapClientId) return;
+  if(a.type==='join'){
+    if(isOwner && a.player && !state.players[a.player]){
+      state.players[a.player]={coins:1,shares:0};
+      addActivity(`${a.player} joined DapMarket and received 1 Dap Coin.`);
+      populatePlayers(); updateDisplay(false);
+      broadcast('state',{state:cloneState()});
+    }
+    return;
+  }
+  if(a.type==='buy') buy(true,a.player,a.q);
+  if(a.type==='sell') sell(true,a.player,a.q);
+  if(a.type==='raise') moveMarket(5,'raised',true);
+  if(a.type==='lower') moveMarket(-5,'lowered',true);
+  if(a.type==='setPrice') setMarketPrice(a.price,true);
+  if(a.type==='give') giveCoins(true,a.player,a.amount);
+  if(a.type==='transfer') transfer(true,a.from,a.to,a.amount);
+  if(a.type==='pause') setPaused(a.value,true);
+  if(a.type==='reset') resetGame(true);
+}
+
+window.dapClientId=crypto.randomUUID();
+
+function normalizeName(name){ return String(name||'').trim().replace(/\s+/g,' ').toLowerCase(); }
+function setAccountMessage(message,error=false){
+  const el=$("accountMessage");
+  el.textContent=message||"";
+  el.classList.toggle('error',Boolean(error));
+}
+function showAccountModal(){
+  $("accountInput").value=accountName;
+  setAccountMessage('');
+  $("accountContinueButton").disabled=false;
+  $("accountContinueButton").textContent='Continue to DapMarket';
+  $("accountModal").classList.remove("hidden");
+  $("accountModal").style.display="flex";
+  setTimeout(()=>$("accountInput").focus(),50);
+}
+function finishNameCheck(available,message=''){
+  if(nameCheckPending){ clearTimeout(nameCheckPending.timer); nameCheckPending=null; }
+  $("accountContinueButton").disabled=false;
+  $("accountContinueButton").textContent='Continue to DapMarket';
+  if(!available){
+    setAccountMessage(message || 'This name has been taken. Please try something else.',true);
+    $("accountInput").focus();
+    return;
+  }
+  const name=$("accountInput").value.trim().replace(/\s+/g,' ');
+  accountName=name;
+  localStorage.setItem(ACCOUNT_STORAGE_KEY,accountName);
+  state.currentPlayer=accountName;
+  if(!state.players[accountName]) state.players[accountName]={coins:1,shares:0};
+  $("accountName").textContent=accountName;
+  $("accountModal").classList.add("hidden");
+  $("accountModal").style.display="none";
+  populatePlayers(); updateDisplay(false);
+  if(channel) broadcast('action',{action:{type:'join',player:accountName,clientId:window.dapClientId}});
+  notify(`Welcome, ${accountName}!`);
+}
+function saveAccount(){
+  const input=$("accountInput");
+  const button=$("accountContinueButton");
+  const name=input.value.trim().replace(/\s+/g,' ');
+  setAccountMessage('');
+
+  if(!name){
+    setAccountMessage('Please enter a name.',true);
+    input.focus();
+    return;
+  }
+  if(name.length<2){
+    setAccountMessage('Name must be at least 2 characters.',true);
+    input.focus();
+    return;
+  }
+  if(!/^[A-Za-z0-9 _-]+$/.test(name)){
+    setAccountMessage('Use letters, numbers, spaces, - or _.',true);
+    input.focus();
+    return;
+  }
+
+  const normalized=normalizeName(name);
+  const currentNormalized=normalizeName(accountName);
+  const alreadyTaken=Object.keys(state.players||{}).some(n=>
+    normalizeName(n)===normalized && normalizeName(n)!==currentNormalized
+  );
+
+  if(alreadyTaken){
+    setAccountMessage('This name has been taken. Please try something else.',true);
+    input.focus();
+    return;
+  }
+
+  // If multiplayer is not connected, accept the name locally.
+  if(!channel){
+    finishNameCheck(true);
+    return;
+  }
+
+  // Ask connected players whether this name is already in use.
+  const requestId=crypto.randomUUID();
+  button.disabled=true;
+  button.textContent='Checking name...';
+  nameCheckPending={requestId,timer:setTimeout(()=>{
+    if(nameCheckPending && nameCheckPending.requestId===requestId){
+      finishNameCheck(true);
+    }
+  },1500)};
+  broadcast('name-check',{requestId,name:normalized});
+}
+
+function switchAccount(){
+  if(!confirm("Switch account?")) return;
+  accountName="";
+  localStorage.removeItem(ACCOUNT_STORAGE_KEY);
+  showAccountModal();
+}
+
+function money(n){ return "$"+Number(n).toFixed(2); }
+
+function notify(message){
+  els.toast.textContent=message;
+  els.toast.classList.add("show");
+  clearTimeout(notify.timer);
+  notify.timer=setTimeout(()=>els.toast.classList.remove("show"),2200);
+}
+
+function addActivity(message){
+  state.activity.unshift({message,time:new Date().toLocaleTimeString()});
+  state.activity=state.activity.slice(0,30);
+}
+
+function populatePlayers(){
+  const names=Object.keys(state.players);
+  for(const select of [$("givePlayer"),$("transferFrom"),$("transferTo")]){
+    const old=select.value;
+    select.innerHTML="";
+    names.forEach(name=>{
+      const option=document.createElement("option");
+      option.value=name; option.textContent=name; select.appendChild(option);
+    });
+    if(names.includes(old)) select.value=old;
+  }
+  $("accountName").textContent=accountName || "Not signed in";
+}
+
+function updateDisplay(){
+  const player=state.players[state.currentPlayer];
+  if(!player) return;
+  els.price.textContent=money(state.stockPrice);
+  els.coins.textContent=Number(player.coins).toFixed(2);
+  els.shares.textContent=player.shares;
+  els.portfolio.textContent=money(player.coins+player.shares*state.stockPrice);
+
+  const diff=state.stockPrice-state.previousPrice;
+  els.change.className="change "+(diff>0?"up":diff<0?"down":"flat");
+  els.change.textContent=diff>0?`▲ +${money(diff)} this tick`:diff<0?`▼ -${money(Math.abs(diff))} this tick`:"● No change";
+
+  els.status.textContent=state.paused?"● PAUSED":"● LIVE";
+  els.status.style.color=state.paused?"var(--gold)":"var(--green)";
+
+  renderLeaderboard();
+  renderLog();
+  drawChart();
+}
+
+function renderLeaderboard(){
+  const rows=Object.entries(state.players).map(([name,p])=>({
+    name,total:p.coins+p.shares*state.stockPrice,shares:p.shares
+  })).sort((a,b)=>b.total-a.total);
+  els.leaderboard.innerHTML=rows.map((r,i)=>`<tr><td>${i+1}. ${escapeHtml(r.name)}</td><td>${r.shares}</td><td>${money(r.total)}</td></tr>`).join("");
+}
+
+function renderLog(){
+  if(!state.activity.length){
+    els.log.innerHTML='<div class="log-item"><span>No activity yet.</span></div>';
+    return;
+  }
+  els.log.innerHTML=state.activity.map(x=>`<div class="log-item">${escapeHtml(x.message)}<br><span>${escapeHtml(x.time)}</span></div>`).join("");
+}
+
+function escapeHtml(text){
+  return String(text).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+
+function getQuantity(){
+  const q=Math.floor(Number(els.quantity.value));
+  if(!Number.isFinite(q)||q<1) return 0;
+  return q;
+}
+
+function buy(remote=false, playerName=state.currentPlayer, q=getQuantity()){
+  const p=state.players[playerName];
+  if(!p || !q){if(!remote) notify("Enter a valid quantity.");return}
+  const cost=q*state.stockPrice;
+  if(p.coins+1e-9<cost){if(!remote) notify("Not enough Dap Coins.");return}
+  p.coins-=cost;p.shares+=q;
+  addActivity(`${playerName} bought ${q} Dap Stock for ${money(cost)}.`);
+  updateDisplay(false);
+  if(!remote) broadcast('action',{action:{type:'buy',player:playerName,q,clientId:window.dapClientId}});
+  if(!remote) notify(`Bought ${q} Dap Stock.`);
+}
+
+function sell(remote=false, playerName=state.currentPlayer, q=getQuantity()){
+  const p=state.players[playerName];
+  if(!p || !q){if(!remote) notify("Enter a valid quantity.");return}
+  if(p.shares<q){if(!remote) notify("You don't own enough Dap Stock.");return}
+  const value=q*state.stockPrice;
+  p.shares-=q;p.coins+=value;
+  addActivity(`${playerName} sold ${q} Dap Stock for ${money(value)}.`);
+  updateDisplay(false);
+  if(!remote) broadcast('action',{action:{type:'sell',player:playerName,q,clientId:window.dapClientId}});
+  if(!remote) notify(`Sold ${q} Dap Stock.`);
+}
+
+function moveMarket(amount,reason,remote=false){
+  state.previousPrice=state.stockPrice;
+  state.stockPrice=Math.max(MIN_PRICE,state.stockPrice+amount);
+  state.history.push(state.stockPrice);
+  if(state.history.length>MAX_HISTORY)state.history.shift();
+  addActivity(`Owner ${reason} the market to ${money(state.stockPrice)}.`);
+  updateDisplay(false);
+  if(!remote) broadcast('action',{action:{type:amount>0?'raise':'lower',clientId:window.dapClientId}});
+}
+
+function setMarketPrice(price,remote=false){
+  if(!Number.isFinite(price)||price<MIN_PRICE){if(!remote) els.adminMessage.textContent=`Price must be at least ${money(MIN_PRICE)}.`;return}
+  state.previousPrice=state.stockPrice;state.stockPrice=price;state.history.push(price);
+  if(state.history.length>MAX_HISTORY)state.history.shift();
+  addActivity(`Owner set the market price to ${money(price)}.`);
+  updateDisplay(false);
+  if(!remote) broadcast('action',{action:{type:'setPrice',price,clientId:window.dapClientId}});
+}
+
+function randomMarket(){
+  if(state.paused || !isOwner) return;
+  state.previousPrice=state.stockPrice;
+  const volatility=Math.max(.25,state.stockPrice*.045);
+  const movement=(Math.random()*2-1)*volatility;
+  state.stockPrice=Math.max(MIN_PRICE,state.stockPrice+movement);
+  state.history.push(state.stockPrice);
+  if(state.history.length>MAX_HISTORY)state.history.shift();
+  updateDisplay(false);
+  broadcast('state',{state:cloneState()});
+}
+
+function drawChart(){
+  const canvas=els.chart, rect=canvas.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+  const width=Math.max(1,rect.width),height=Math.max(1,rect.height);
+  canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
+  const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,width,height);
+  const data=state.history;if(data.length<2)return;
+  const min=Math.min(...data),max=Math.max(...data),range=Math.max(.01,max-min);
+  ctx.strokeStyle="rgba(148,163,184,.12)";ctx.lineWidth=1;
+  for(let i=1;i<5;i++){const y=i*height/5;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(width,y);ctx.stroke()}
+  const gradient=ctx.createLinearGradient(0,0,0,height);
+  gradient.addColorStop(0,"rgba(56,189,248,.25)");gradient.addColorStop(1,"rgba(56,189,248,0)");
+  ctx.beginPath();
+  data.forEach((price,i)=>{
+    const x=i*(width/(data.length-1));
+    const y=height-((price-min)/range)*(height-24)-12;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  });
+  ctx.lineTo(width,height);ctx.lineTo(0,height);ctx.closePath();ctx.fillStyle=gradient;ctx.fill();
+  ctx.beginPath();
+  data.forEach((price,i)=>{
+    const x=i*(width/(data.length-1));
+    const y=height-((price-min)/range)*(height-24)-12;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  });
+  ctx.strokeStyle="#38bdf8";ctx.lineWidth=3;ctx.stroke();
+}
+
+function unlock(){
+  if(els.password.value===OWNER_PASSWORD){
+    isOwner=true;
+    els.passwordScreen.classList.add("hidden");els.admin.classList.remove("hidden");
+    els.passwordMessage.textContent="";
+  }else{
+    els.passwordMessage.textContent="Incorrect password.";
+    els.password.value="";els.password.focus();
+  }
+}
+
+function closeOwner(){
+  els.modal.classList.remove("open");
+  els.passwordScreen.classList.remove("hidden");els.admin.classList.add("hidden");
+  els.password.value="";els.passwordMessage.textContent="";els.adminMessage.textContent="";
+}
+
+function giveCoins(remote=false, playerName=null, amount=null){
+  const name=playerName||$('givePlayer').value;
+  const amt=amount==null?Number($('giveAmount').value):Number(amount);
+  if(!Number.isFinite(amt)||amt<=0){if(!remote)els.adminMessage.textContent='Enter a valid amount.';return}
+  if(!state.players[name])return;
+  state.players[name].coins+=amt;
+  addActivity(`Owner gave ${money(amt)} to ${name}.`);
+  updateDisplay(false);
+  if(!remote) broadcast('action',{action:{type:'give',player:name,amount:amt,clientId:window.dapClientId}});
+  if(!remote)els.adminMessage.textContent=`Gave ${money(amt)} to ${name}.`;
+}
+
+function transfer(remote=false, from=null, to=null, amount=null){
+  const f=from||$('transferFrom').value,t=to||$('transferTo').value,amt=amount==null?Number($('transferAmount').value):Number(amount);
+  if(f===t){if(!remote)els.adminMessage.textContent='Choose two different players.';return}
+  if(!Number.isFinite(amt)||amt<=0){if(!remote)els.adminMessage.textContent='Enter a valid amount.';return}
+  if(!state.players[f]||!state.players[t]||state.players[f].coins<amt){if(!remote)els.adminMessage.textContent='The sender does not have enough coins.';return}
+  state.players[f].coins-=amt;state.players[t].coins+=amt;
+  addActivity(`${f} transferred ${money(amt)} to ${t}.`);
+  updateDisplay(false);
+  if(!remote) broadcast('action',{action:{type:'transfer',from:f,to:t,amount:amt,clientId:window.dapClientId}});
+}
+
+function setPaused(value,remote=false){
+  state.paused=Boolean(value);
+  $('pauseButton').textContent=state.paused?'▶ Resume Market':'⏸ Pause Market';
+  addActivity(`Owner ${state.paused?'paused':'resumed'} the market.`);
+  updateDisplay(false);
+  if(!remote) broadcast('action',{action:{type:'pause',value:state.paused,clientId:window.dapClientId}});
+}
+
+function resetGame(remote=false){
+  if(!remote && !confirm('Reset DapMarket for everyone?'))return;
+  state={stockPrice:10,previousPrice:10,history:[10],players:structuredClone(defaultPlayers),currentPlayer:accountName || state.currentPlayer || 'Blake',paused:false,activity:[]};
+  populatePlayers();addActivity('Game reset to defaults.');updateDisplay(false);
+  if(!remote) broadcast('action',{action:{type:'reset',clientId:window.dapClientId}});
+  if(!remote)els.adminMessage.textContent='Game reset for everyone.';
+}
+
+$('accountContinueButton').addEventListener('click',saveAccount);
+$('accountInput').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveAccount(); } });
+$('switchAccountButton').addEventListener('click',switchAccount);
+$('buyButton').addEventListener('click',()=>buy());
+$('sellButton').addEventListener('click',()=>sell());
+$('ownersButton').addEventListener('click',()=>{els.modal.classList.add('open');els.password.focus()});
+$('closeOwnerButton').addEventListener('click',closeOwner);
+$('closePasswordButton').addEventListener('click',closeOwner);
+$('loginButton').addEventListener('click',unlock);
+els.password.addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
+$('raiseButton').addEventListener('click',()=>moveMarket(5,'raised'));
+$('lowerButton').addEventListener('click',()=>moveMarket(-5,'lowered'));
+$('giveCoinsButton').addEventListener('click',()=>giveCoins());
+$('transferButton').addEventListener('click',()=>transfer());
+$('pauseButton').addEventListener('click',()=>setPaused(!state.paused));
+$('setPriceButton').addEventListener('click',()=>setMarketPrice(Number($('setPriceInput').value)));
+$('resetButton').addEventListener('click',()=>resetGame());
+window.addEventListener('resize',drawChart);
+
+if(!accountName) showAccountModal();
+populatePlayers();
+updateDisplay(false);
+initMultiplayer();
+setInterval(randomMarket,TICK_MS);
+</script>
+</body>
+</html>
